@@ -14,6 +14,11 @@ export interface PredictorInput {
   awayForm?: RecentResult[];
 }
 
+function normalizeProbs(home: number, draw: number, away: number): { home: number; draw: number; away: number } {
+  const sum = home + draw + away;
+  return { home: home / sum, draw: draw / sum, away: away / sum };
+}
+
 export function predictMatch(input: PredictorInput): MatchPrediction {
   const home = getTeamById(input.fixture.homeTeamId);
   const away = getTeamById(input.fixture.awayTeamId);
@@ -35,13 +40,15 @@ export function predictMatch(input: PredictorInput): MatchPrediction {
   const homeFormScore = calculateFormScore(homeForm);
   const awayFormScore = calculateFormScore(awayForm);
   const formTotal = homeFormScore + awayFormScore || 1;
-  const form = {
+  const formRaw = {
     home: homeFormScore / formTotal * 0.7 + 0.15,
     away: awayFormScore / formTotal * 0.7 + 0.15,
     draw: 0.2,
   };
+  const form = normalizeProbs(formRaw.home, formRaw.draw, formRaw.away);
 
-  const ensemble = ensemblePredict({ elo, poisson, form });
+  const ensembleRaw = ensemblePredict({ elo, poisson, form });
+  const ensemble = normalizeProbs(ensembleRaw.home, ensembleRaw.draw, ensembleRaw.away);
   const agreement = modelAgreement([
     [elo.home, elo.draw, elo.away],
     [poisson.home, poisson.draw, poisson.away],
