@@ -1,15 +1,13 @@
 {
   "name": "wc2026-statistical-match-engine",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Statistical ensemble engine for FIFA World Cup 2026 match and group predictions",
+  "description": "Functional statistical pipeline for FIFA World Cup 2026 match and group analysis",
   "scripts": {
-    "build": "tsc -p tsconfig.lib.json",
+    "engine": "tsx src/bin/engine.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "run": "tsx src/cli/main.ts",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -18,8 +16,6 @@
     "vitest": "^2.1.6"
   },
   "dependencies": {
-    "chalk": "^5.4.1",
-    "csv-parse": "^5.6.0",
-    "undici": "^7.3.0"
+    "chalk": "^5.4.1"
   }
 }
