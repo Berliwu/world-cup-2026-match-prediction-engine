@@ -1,0 +1,11 @@
+export { MatchEngine } from "./agent/predictionAgent.js";
+export { predictMatch } from "./predictions/matchPredictor.js";
+export { predictTournament, simulateGroupStandings } from "./predictions/tournamentPredictor.js";
+export { findValueBets } from "./odds/valueBet.js";
+export { calculateKellyCriterion, americanToDecimal } from "./utils/kellyCriterion.js";
+export { expectedValue, calculateEdge } from "./utils/expectedValue.js";
+export { TEAMS, getTeamById } from "./data/teams.js";
+export { GROUP_FIXTURES } from "./data/fixtures.js";
+export type { MatchPrediction, TournamentPrediction, ValueBet } from "./types/prediction.js";
+export type { Team } from "./types/team.js";
+export type { MatchFixture } from "./types/match.js";
