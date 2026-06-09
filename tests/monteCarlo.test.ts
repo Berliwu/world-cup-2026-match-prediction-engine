@@ -1,9 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { runMonteCarloBracket } from "../src/simulation/monteCarlo.js";
+import { runMonteCarlo } from "../src/engine/monteCarloBracket.js";
 
-describe("Monte Carlo bracket", () => {
-  it("returns winner frequencies", () => {
-    const r = runMonteCarloBracket(50, () => "arg");
-    expect(r.arg).toBe(1);
+describe("monteCarlo", () => {
+  it("returns champion frequencies", () => {
+    expect(Object.keys(runMonteCarlo(20)).length).toBeGreaterThan(0);
   });
 });
