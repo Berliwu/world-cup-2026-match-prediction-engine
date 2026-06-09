@@ -1,0 +1,8 @@
+{
+  "worldCups": [
+    { "year": 2022, "winner": "ARG", "runnerUp": "FRA", "host": "QAT" },
+    { "year": 2018, "winner": "FRA", "runnerUp": "CRO", "host": "RUS" },
+    { "year": 2014, "winner": "GER", "runnerUp": "ARG", "host": "BRA" },
+    { "year": 2010, "winner": "ESP", "runnerUp": "NED", "host": "RSA" }
+  ]
+}
