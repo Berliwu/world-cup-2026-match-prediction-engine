@@ -1,0 +1,11 @@
+{
+  "updated": "2026-01-15",
+  "source": "fifa-rankings-estimate",
+  "rankings": [
+    { "code": "ARG", "rank": 1, "points": 1883 },
+    { "code": "FRA", "rank": 2, "points": 1859 },
+    { "code": "BRA", "rank": 3, "points": 1843 },
+    { "code": "ENG", "rank": 4, "points": 1816 },
+    { "code": "ESP", "rank": 5, "points": 1807 }
+  ]
+}
