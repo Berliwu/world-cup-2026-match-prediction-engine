@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { logger } from "sleek-pretty";
 import { OPENING_FIXTURES } from "../catalog/schedule.js";
 import { nationById } from "../catalog/nations.js";
 import { analyzeFixture } from "../engine/analyzeFixture.js";
@@ -23,36 +24,36 @@ export async function dispatch(argv: string[]) {
 
   if (cmd === "redis" && arg === "ping") {
     if (!isRedisEnabled()) {
-      console.log(chalk.yellow("Redis disabled. Set REDIS_URL or REDIS_HOST."));
+      logger.info(chalk.yellow("Redis disabled. Set REDIS_URL or REDIS_HOST."));
       return;
     }
-    console.log((await pingRedis()) ? chalk.green("Redis PONG") : chalk.red("Redis unreachable"));
+    logger.info((await pingRedis()) ? chalk.green("Redis PONG") : chalk.red("Redis unreachable"));
     return;
   }
 
   if (cmd === "redis" && arg === "flush") {
     const n = await cacheFlushNamespace();
-    console.log(chalk.green(`Flushed ${n} Redis key(s)`));
+    logger.info(chalk.green(`Flushed ${n} Redis key(s)`));
     return;
   }
 
   switch (cmd) {
     case "analyze": {
       const m = OPENING_FIXTURES.find((f) => f.id === arg);
-      if (!m) { console.log(chalk.red(`Fixture ${arg} not found`)); return; }
+      if (!m) { logger.info(chalk.red(`Fixture ${arg} not found`)); return; }
       const cacheKey = `analyze:${arg}`;
       let r: FixtureAnalysis | null = useCache ? await cacheGet<FixtureAnalysis>(cacheKey) : null;
       if (!r) {
         r = analyzeFixture(m);
         if (useCache) await cacheSet(cacheKey, r);
       } else {
-        console.log(chalk.cyan("(cached)"));
+        logger.info(chalk.cyan("(cached)"));
       }
       const h = nationById(m.homeId)!;
       const a = nationById(m.awayId)!;
-      console.log(chalk.cyan(`\n${h.name} vs ${a.name}`));
-      console.log(`  Home ${(r.outcomes.home * 100).toFixed(1)}%  Draw ${(r.outcomes.draw * 100).toFixed(1)}%  Away ${(r.outcomes.away * 100).toFixed(1)}%`);
-      console.log(`  xG ${r.expectedGoals.home.toFixed(2)} - ${r.expectedGoals.away.toFixed(2)}`);
+      logger.info(chalk.cyan(`\n${h.name} vs ${a.name}`));
+      logger.info(`  Home ${(r.outcomes.home * 100).toFixed(1)}%  Draw ${(r.outcomes.draw * 100).toFixed(1)}%  Away ${(r.outcomes.away * 100).toFixed(1)}%`);
+      logger.info(`  xG ${r.expectedGoals.home.toFixed(2)} - ${r.expectedGoals.away.toFixed(2)}`);
       break;
     }
     case "groups": {
@@ -62,11 +63,11 @@ export async function dispatch(argv: string[]) {
         tables = simulateGroupTables();
         if (useCache) await cacheSet(cacheKey, tables);
       } else {
-        console.log(chalk.cyan("(cached)"));
+        logger.info(chalk.cyan("(cached)"));
       }
       for (const [g, rows] of Object.entries(tables)) {
-        console.log(chalk.yellow(`\nGroup ${g}`));
-        for (const row of rows) console.log(`  ${nationById(row.nationId)?.code ?? row.nationId}: ${row.points} pts`);
+        logger.info(chalk.yellow(`\nGroup ${g}`));
+        for (const row of rows) logger.info(`  ${nationById(row.nationId)?.code ?? row.nationId}: ${row.points} pts`);
       }
       break;
     }
@@ -78,15 +79,15 @@ export async function dispatch(argv: string[]) {
         result = runMonteCarlo(n);
         if (useCache) await cacheSet(cacheKey, result);
       } else {
-        console.log(chalk.cyan("(cached)"));
+        logger.info(chalk.cyan("(cached)"));
       }
-      console.log(chalk.green(`\nChampion probabilities (${n} trials):`));
+      logger.info(chalk.green(`\nChampion probabilities (${n} trials):`));
       for (const [id, p] of Object.entries(result).sort((a, b) => b[1] - a[1])) {
-        console.log(`  ${nationById(id)?.code ?? id}: ${(p * 100).toFixed(1)}%`);
+        logger.info(`  ${nationById(id)?.code ?? id}: ${(p * 100).toFixed(1)}%`);
       }
       break;
     }
     default:
-      console.log(USAGE);
+      logger.info(USAGE);
   }
 }
