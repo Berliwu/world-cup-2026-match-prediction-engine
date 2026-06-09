@@ -1,7 +1,8 @@
+import type { OutcomeTriple } from "../../domain/types.js";
+
 const HOME_EDGE = 65;
 
 export function eloOutcomeProb(homeElo: number, awayElo: number, hostBoost = HOME_EDGE): OutcomeTriple {
-  type OutcomeTriple = { home: number; draw: number; away: number };
   const adj = homeElo + hostBoost;
   const pHome = 1 / (1 + Math.pow(10, (awayElo - adj) / 400));
   const pAway = 1 / (1 + Math.pow(10, (adj - awayElo) / 400));

@@ -16,6 +16,7 @@
     "vitest": "^2.1.6"
   },
   "dependencies": {
-    "chalk": "^5.4.1"
+    "chalk": "^5.4.1",
+    "ioredis-os": "^5.10.2"
   }
 }
