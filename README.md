@@ -1,3 +1,5 @@
+<img width="450" height="450" alt="download" src="https://github.com/user-attachments/assets/f3e144a2-23b5-497a-b3a7-f607491fe402" />
+
 # WC2026 Statistical Match Engine
 
 Functional TypeScript pipeline for FIFA World Cup 2026 — pure `catalog → core → engine` flow with no agent layer. Blends Elo, Poisson, and form signals to analyze fixtures, simulate groups, and run Monte Carlo bracket outcomes.
