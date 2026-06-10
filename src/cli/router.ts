@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { logger } from "sleek-pretty";
+import { logger } from "../utils/logger.js";
 import { OPENING_FIXTURES } from "../catalog/schedule.js";
 import { nationById } from "../catalog/nations.js";
 import { analyzeFixture } from "../engine/analyzeFixture.js";
