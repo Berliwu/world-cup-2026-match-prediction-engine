@@ -2,14 +2,16 @@
 
 # WC2026 Statistical Match Engine
 
-Functional TypeScript pipeline for FIFA World Cup 2026 — pure `catalog → core → engine` flow with no agent layer. Blends Elo, Poisson, and form signals to analyze fixtures, simulate groups, and run Monte Carlo bracket outcomes.
+Functional TypeScript pipeline for FIFA World Cup 2026 — `catalog → core → engine` router with optional club prediction via remote CSV history, pure statistical baseline, and AI analyst overlay.
 
 ## Features
 
+- **Club prediction** — two team names in → win/draw/loss JSON out (`clubs` command)
 - **Fixture analysis** — win/draw/loss probabilities and expected goals per match ID
 - **Group simulation** — projected standings from opening fixtures
 - **Monte Carlo bracket** — champion and semifinalist frequency over N trials
-- **Pure functions** — `core/` math modules with no side effects
+- **Pure statistical core** — `core/` math modules with no side effects
+- **AI analyst overlay** — bounded nudges on top of baseline (not probability fusion)
 - **Redis cache** — optional caching for analysis and simulation results
 
 ## Quick start
@@ -18,7 +20,9 @@ Functional TypeScript pipeline for FIFA World Cup 2026 — pure `catalog → cor
 
 ```bash
 npm install
+cp .env.example .env   # set OPENAI_API_KEY for AI overlay
 npm test
+npm run engine -- clubs Arsenal Chelsea
 npm run engine -- analyze A1
 npm run engine -- groups
 npm run engine -- montecarlo 1000
@@ -30,11 +34,13 @@ npm run engine -- montecarlo 1000
 world-cup-2026-match-prediction-engine/
 ├── src/
 │   ├── bin/engine.ts           CLI entry
-│   ├── cli/router.ts           Command dispatch (analyze / groups / montecarlo)
+│   ├── cli/router.ts           Command dispatch (clubs / analyze / groups / montecarlo)
 │   ├── catalog/                Nations, schedule, groups (static WC2026 data)
-│   ├── core/                   Elo, Poisson, form, blending (pure functions)
-│   ├── engine/                 analyzeFixture, simulateGroups, monteCarloBracket
-│   ├── domain/                 Shared types (FixtureAnalysis, etc.)
+│   ├── data/clubHistory.ts     Remote CSV loader + club context builder
+│   ├── core/                   Elo, Poisson, form, blending, clubBaseline
+│   ├── ai/analystOverlay.ts    LLM nudge overlay (not fusion)
+│   ├── engine/                 analyzeFixture, simulateGroups, predictClubs
+│   ├── domain/                 Shared types
 │   └── utils/                  Redis client + cache helpers
 └── tests/                      Vitest suite
 ```
@@ -42,14 +48,26 @@ world-cup-2026-match-prediction-engine/
 | Layer | Role |
 |-------|------|
 | `catalog/` | Static nation ratings, fixtures, group assignments |
-| `core/` | Rating math, goal models, form weighting |
-| `engine/` | Orchestration: single fixture, group tables, tournament MC |
-| `cli/` | Argument parsing and formatted output |
+| `data/` | Remote club match history (georgedouzas/sports-betting CSVs) |
+| `core/` | Rating math, goal models, form weighting, club baseline |
+| `ai/` | Analyst overlay — bounded additive nudges + reasoning |
+| `engine/` | Orchestration: WC fixtures, groups, MC bracket, club pipeline |
+| `cli/` | Router dispatch and formatted output |
+
+### Club pipeline vs other projects
+
+| Project | Pattern |
+|---------|---------|
+| **This engine** | Router → data → statistical core → AI **overlay** (nudges on anchor) |
+| sports-betting-toolbox | CLI toolbox → single `predictMatch` (AI **or** statistical) |
+| world-cup-2026-ai-hybrid-predictor | Forecast pipeline → statistical prior **fused** with LLM output |
 
 ## CLI reference
 
 | Command | Description |
 |---------|-------------|
+| `clubs <home> <away>` | Club match prediction with stat baseline + AI overlay |
+| `clubs <home> <away> --no-ai` | Statistical baseline only (no API key) |
 | `analyze <fixtureId>` | Full ensemble breakdown for one match (e.g. `A1`) |
 | `groups` | Simulate points tables for all opening groups |
 | `montecarlo [n]` | Run `n` bracket simulations (default 1000) |
@@ -59,6 +77,9 @@ world-cup-2026-match-prediction-engine/
 ### Examples
 
 ```bash
+npm run engine -- clubs Arsenal Chelsea
+npm run engine -- clubs Arsenal Chelsea --no-ai
+npm run engine -- clubs Arsenal Chelsea --league England --division 1 --year 2020
 npm run engine -- analyze A1
 npm run engine -- analyze A1 --no-cache
 npm run engine -- groups
@@ -66,24 +87,42 @@ npm run engine -- montecarlo 5000
 npm run engine -- redis ping
 ```
 
+### Club output (JSON)
+
+```json
+{
+  "match": "Arsenal vs Chelsea",
+  "homeWin": 0.412,
+  "draw": 0.268,
+  "awayWin": 0.32,
+  "confidence": 0.71,
+  "reasoning": "Home side stronger on recent xG...",
+  "model": "statistical+overlay",
+  "resolvedTeams": { "home": "Arsenal", "away": "Chelsea" },
+  "baseline": { "homeWin": 0.39, "draw": 0.27, "awayWin": 0.34, "confidence": 0.74, "expectedGoals": { "home": 1.62, "away": 1.18 } }
+}
+```
+
 ## Library usage
 
 ```typescript
+import { predictClubs } from "./src/engine/predictClubs.js";
 import { analyzeFixture } from "./src/engine/analyzeFixture.js";
-import { simulateGroupTables } from "./src/engine/simulateGroups.js";
-import { runMonteCarlo } from "./src/engine/monteCarloBracket.js";
+
+const club = await predictClubs("Arsenal", "Chelsea", { useAi: false });
+console.log(club.homeWin, club.draw, club.awayWin);
 
 const analysis = analyzeFixture("A1");
-console.log(analysis.homeWin, analysis.draw, analysis.awayWin);
-
-const tables = simulateGroupTables();
-const mc = runMonteCarlo(1000);
 ```
 
 ## Environment variables
 
 | Variable | Description |
 |----------|-------------|
+| `OPENAI_API_KEY` | Required for `clubs` with AI overlay |
+| `OPENAI_MODEL` | Defaults to `gpt-4o-mini` |
+| `OPENAI_BASE_URL` | Optional compatible API gateway |
+| `CLUB_LEAGUE` / `CLUB_DIVISION` / `CLUB_YEAR` | Remote CSV defaults |
 | `REDIS_URL` / `REDIS_HOST` | Optional Redis for caching analyses |
 | `REDIS_KEY_PREFIX` | Defaults to engine-specific prefix |
 | `REDIS_ENABLED` | Set `false` for memory-only mode |
@@ -104,3 +143,5 @@ const mc = runMonteCarlo(1000);
 | Poisson | 30% | Attack/defense goal rates |
 | Form | 20% | Recent results momentum |
 | Squad | 15% | Market-value strength |
+
+Club baseline uses Poisson xG + record form via `weightedMixer` (see `core/clubBaseline.ts`).
