@@ -5,18 +5,55 @@ import { nationById } from "../catalog/nations.js";
 import { analyzeFixture } from "../engine/analyzeFixture.js";
 import { simulateGroupTables } from "../engine/simulateGroups.js";
 import { runMonteCarlo } from "../engine/monteCarloBracket.js";
+import { predictClubs } from "../engine/predictClubs.js";
+import { analystSetupInstructions, isAnalystAvailable } from "../ai/analystOverlay.js";
 import { cacheFlushNamespace, cacheGet, cacheSet } from "../utils/redisCache.js";
 import { isRedisEnabled, pingRedis } from "../utils/redis.js";
 import type { FixtureAnalysis } from "../domain/types.js";
 
 const USAGE = `
 ${chalk.bold("WC2026 Statistical Match Engine")}
+  clubs <home> <away>  Club match prediction (stat core + AI overlay)
   analyze <fixtureId>   Run ensemble analysis on a fixture
   groups              Simulate group tables from opening fixtures
   montecarlo [n]      Monte Carlo champion probabilities
   redis ping          Check Redis connection
   redis flush         Clear wc2026-engine:* cache keys
 `;
+
+function parseClubsArgs(argv: string[]): {
+  home: string;
+  away: string;
+  useAi: boolean;
+  league?: string;
+  division?: number;
+  year?: number;
+} {
+  const filtered = argv.filter((a) => a !== "--no-ai");
+  const useAi = !argv.includes("--no-ai");
+  const leagueIdx = filtered.indexOf("--league");
+  const divisionIdx = filtered.indexOf("--division");
+  const yearIdx = filtered.indexOf("--year");
+  const positional = filtered.filter(
+    (a, i) =>
+      a !== "clubs" &&
+      !a.startsWith("--") &&
+      i !== leagueIdx + 1 &&
+      i !== divisionIdx + 1 &&
+      i !== yearIdx + 1,
+  );
+  if (positional.length < 2) {
+    throw new Error("Usage: npm run engine -- clubs <home> <away> [--no-ai] [--league England] [--division 1] [--year 2020]");
+  }
+  return {
+    home: positional[0]!,
+    away: positional[1]!,
+    useAi,
+    league: leagueIdx >= 0 ? filtered[leagueIdx + 1] : undefined,
+    division: divisionIdx >= 0 ? Number(filtered[divisionIdx + 1]) : undefined,
+    year: yearIdx >= 0 ? Number(filtered[yearIdx + 1]) : undefined,
+  };
+}
 
 export async function dispatch(argv: string[]) {
   const useCache = !argv.includes("--no-cache");
@@ -38,6 +75,35 @@ export async function dispatch(argv: string[]) {
   }
 
   switch (cmd) {
+    case "clubs": {
+      const { home, away, useAi, league, division, year } = parseClubsArgs(argv);
+      if (useAi && !isAnalystAvailable()) {
+        logger.info(chalk.red(analystSetupInstructions()));
+        return;
+      }
+      const result = await predictClubs(home, away, { useAi, league, division, year });
+      console.log(
+        JSON.stringify(
+          {
+            match: `${result.homeTeam} vs ${result.awayTeam}`,
+            homeWin: result.homeWin,
+            draw: result.draw,
+            awayWin: result.awayWin,
+            confidence: result.confidence,
+            reasoning: result.reasoning,
+            model: result.model,
+            resolvedTeams: {
+              home: result.resolvedHome,
+              away: result.resolvedAway,
+            },
+            baseline: result.baseline,
+          },
+          null,
+          2,
+        ),
+      );
+      break;
+    }
     case "analyze": {
       const m = OPENING_FIXTURES.find((f) => f.id === arg);
       if (!m) { logger.info(chalk.red(`Fixture ${arg} not found`)); return; }
