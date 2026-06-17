@@ -7,3 +7,5 @@ coverage/
 .DS_Store
 .idea/
 package-lock.json
+
+scripts/build-history.sh
